@@ -1,0 +1,10 @@
+{
+	"name": "wall-collision",
+	"title": "Wall Collision",
+	"description": "Adds wall collision to measurment templates",
+	"version": "1.0.0",
+	"author": "EndlesNights#9000",
+	"esmodules": ["wall-collision.js"],
+	"minimumCoreVersion": "0.7.5",
+	"compatibleCoreVersion": "0.7.9"
+}
