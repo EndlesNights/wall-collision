@@ -1,11 +1,44 @@
 import { libWrapper } from './shim.js'
-const MODULE_ID = 'wall-collision'
-
-// Hooks.on("setup", () => {
+const MODULE_ID = 'wall-collision';
 	
 // }
 Hooks.once("init", () => {
-	console.log("START UP AND RUNNING!");
+	// console.log("START UP AND RUNNING!");
+});
+
+Hooks.on('renderMeasuredTemplateConfig', (app, html, data) => {
+	app.setPosition({
+		height: 438,
+		width: 475,
+	});
+
+	if (app.object.getFlag(MODULE_ID, 'checkWallCollision') === undefined) {
+		app.object.setFlag(MODULE_ID, 'checkWallCollision', false);
+	}
+	
+	const message = app.object.getFlag(MODULE_ID, 'checkWallCollision') === "true" ? 
+	`<div class="form-group">
+		<label>Enable Collision With Walls?</label>
+		<select name="flags.${MODULE_ID}.checkWallCollision">
+		<option value=true>True</option>
+		<option value=false>False</option>
+		</select>
+	</div>
+	`
+	:
+	`<div class="form-group">
+	<label>Enable Collision With Walls?</label>
+	<select name="flags.${MODULE_ID}.checkWallCollision">
+	<option value=false>False</option>
+	<option value=true>True</option>
+	</select>
+	</div>
+	`;
+
+	html.find(".form-group").last().after(message);
+	// const select = html.find('select[data-target="flags.${MODULE_ID}.checkWallCollision"]')[0];
+	// app._activateFilePicker(select);
+
 });
 
 function MeasuredTemplateOver(obj) {
@@ -40,8 +73,10 @@ function MeasuredTemplateOver(obj) {
 	
 	// Code from highlightGrid(), slight edit to make it more efficent
 	// Get number of rows and columns
-	const nr = Math.ceil(((obj.data.distance * (grid.type === CONST.GRID_TYPES.SQUARE ? 1 : 1.5)) / d.distance) / (d.size / grid.h));
-	const nc = Math.ceil(((obj.data.distance * (grid.type === CONST.GRID_TYPES.SQUARE ? 1 : 1.5)) / d.distance) / (d.size / grid.w));
+	const nr = grid.type === CONST.GRID_TYPES.SQUARE ? 
+		Math.ceil(((obj.data.distance * 1 ) / d.distance) / (d.size / grid.h)) + 1 : Math.ceil(((obj.data.distance * 1.5 ) / d.distance) / (d.size / grid.h));
+	const nc = grid.type === CONST.GRID_TYPES.SQUARE ? 
+		Math.ceil(((obj.data.distance * 1 ) / d.distance) / (d.size / grid.w)) + 1 :  Math.ceil(((obj.data.distance * 1.5 ) / d.distance) / (d.size / grid.w));
 	
 
 	//code from highlightGrid() unedited 
@@ -64,31 +99,35 @@ function MeasuredTemplateOver(obj) {
 			const testX = (gx+hx) - obj.data.x;
 			const testY = (gy+hy) - obj.data.y;
 			let contains = ((r === 0) && (c === 0) && isCenter ) || obj.shape.contains(testX, testY);
-			if(canvas.walls.checkCollision(new Ray({x:obj.data.x, y:obj.data.y}, {x:obj.data.x + testX, y:obj.data.y + testY}))) contains = false;
-			console.log(canvas.walls.checkCollision(new Ray({x:obj.data.x, y:obj.data.y}, {x:obj.data.x + testX, y:obj.data.y + testY})))
+
+			if( obj.data.flags[`${MODULE_ID}`].checkWallCollision === "true" &&  canvas.walls.checkCollision(new Ray({x:obj.data.x, y:obj.data.y}, {x:obj.data.x + testX, y:obj.data.y + testY}))) {
+				contains = false;
+			} 
+			// console.log(canvas.walls.checkCollision(new Ray({x:obj.data.x, y:obj.data.y}, {x:obj.data.x + testX, y:obj.data.y + testY})))
 			// console.log(`gx:${gx}, gy:${gy}\ntestX:${testX}, testY:${testY}, contains:${contains},  i:${i}\nr:${r}, c:${c}`)
 			i++;
 
-			const newDebugLine = {
-				type: CONST.DRAWING_TYPES.POLYGON,
-				author: game.user._id,
-				x: 0,
-				y: 0,
-				strokeWidth: 2,
-				strokeColor: contains ? "#00FF00" : "#FF0000",
-				strokeAlpha: 0.75,
-				textColor: contains ? "#00FF00" : "#FF0000",
-				points: [[obj.data.x, obj.data.y], [obj.data.x + testX, obj.data.y + testY]]
-			};
+			// const newDebugLine = {
+			// 	type: CONST.DRAWING_TYPES.POLYGON,
+			// 	author: game.user._id,
+			// 	x: 0,
+			// 	y: 0,
+			// 	strokeWidth: 2,
+			// 	strokeColor: contains ? "#00FF00" : "#FF0000",
+			// 	strokeAlpha: 0.75,
+			// 	textColor: contains ? "#00FF00" : "#FF0000",
+			// 	points: [[obj.data.x, obj.data.y], [obj.data.x + testX, obj.data.y + testY]]
+			// };
 
-			if(contains) debugLinePass.push(newDebugLine);
-			else debugLineFail.push(newDebugLine);
+			// if(contains) debugLinePass.push(newDebugLine);
+			// else debugLineFail.push(newDebugLine);
+
 			if ( !contains ) continue;
 			grid.grid.highlightGridPosition(hl, {x: gx, y: gy, border, color});
 		}
 	}
 	// debugLineFail.forEach( line => canvas.drawings.createMany(line));
-	debugLinePass.forEach( line => canvas.drawings.createMany(line));
+	//debugLinePass.forEach( line => canvas.drawings.createMany(line));
 }
 
 Hooks.once('setup', function () {
