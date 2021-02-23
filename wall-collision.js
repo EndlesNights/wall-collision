@@ -1,21 +1,22 @@
 import { libWrapper } from './shim.js'
 const MODULE_ID = 'wall-collision';
 	
-// }
-Hooks.once("init", () => {
-	// console.log("START UP AND RUNNING!");
-});
+// Hooks.once("init", () => {
+	// console.log("Wall Collision Loaded");
+// });
 
 Hooks.on('renderMeasuredTemplateConfig', (app, html, data) => {
 	app.setPosition({
-		height: 438,
+		height: 466,
 		width: 475,
 	});
 
 	if (app.object.getFlag(MODULE_ID, 'checkWallCollision') === undefined) {
 		app.object.setFlag(MODULE_ID, 'checkWallCollision', false);
 	}
-	
+	if (app.object.getFlag(MODULE_ID, 'origin') === undefined) {
+		app.object.setFlag(MODULE_ID, 'origin', {x:"",y:""});
+	}	
 	const message = app.object.getFlag(MODULE_ID, 'checkWallCollision') === "true" ? 
 	`<div class="form-group">
 		<label>Enable Collision With Walls?</label>
@@ -33,11 +34,20 @@ Hooks.on('renderMeasuredTemplateConfig', (app, html, data) => {
 	<option value=true>True</option>
 	</select>
 	</div>
+	`;	
+	let originX = app.object.data.flags[`${MODULE_ID}`].origin[`x`];
+	let originY = app.object.data.flags[`${MODULE_ID}`].origin[`y`];
+
+	const message2 = 
+	`<div class="form-group">
+		<label>Origin Point: [x,y]</label>
+		<input type="text" name="flags.${MODULE_ID}.origin.x" value="${originX}" data-dtype="Number"/>
+		<input type="text" name="flags.${MODULE_ID}.origin.y" value="${originY}" data-dtype="Number"/>
+	</div>
 	`;
 
 	html.find(".form-group").last().after(message);
-	// const select = html.find('select[data-target="flags.${MODULE_ID}.checkWallCollision"]')[0];
-	// app._activateFilePicker(select);
+	html.find(".form-group").last().after(message2);
 
 });
 
@@ -78,7 +88,6 @@ function MeasuredTemplateOver(obj) {
 	const nc = grid.type === CONST.GRID_TYPES.SQUARE ? 
 		Math.ceil(((obj.data.distance * 1 ) / d.distance) / (d.size / grid.w)) + 1 :  Math.ceil(((obj.data.distance * 1.5 ) / d.distance) / (d.size / grid.w));
 	
-
 	//code from highlightGrid() unedited 
 	// Get the offset of the template origin relative to the top-left grid space
 	const [tx, ty] = canvas.grid.getTopLeft(obj.data.x, obj.data.y);
@@ -86,48 +95,29 @@ function MeasuredTemplateOver(obj) {
 	const hx = canvas.grid.w / 2;
 	const hy = canvas.grid.h / 2;
 	const isCenter = (obj.data.x - tx === hx) && (obj.data.y - ty === hy);
-	// console.log(canvas.walls.objects.chilcanvas.walls.checkCollision)
 
 	// canvas.walls.checkCollision
 	// Identify grid coordinates covered by the template Graphics
-	let i = 0;
-	let debugLinePass = [];
-	let debugLineFail = [];
+	let originX = !!obj.data.flags[`${MODULE_ID}`].origin[`x`] ? obj.data.flags[`${MODULE_ID}`].origin[`x`] : obj.data.x;
+	let originY = !!obj.data.flags[`${MODULE_ID}`].origin[`y`] ? obj.data.flags[`${MODULE_ID}`].origin[`y`] : obj.data.y;
+
 	for (let r = -nr; r < nr; r++) {
 		for (let c = -nc; c < nc; c++) {
 			let [gx, gy] = canvas.grid.grid.getPixelsFromGridPosition(row0 + r, col0 + c);
 			const testX = (gx+hx) - obj.data.x;
 			const testY = (gy+hy) - obj.data.y;
 			let contains = ((r === 0) && (c === 0) && isCenter ) || obj.shape.contains(testX, testY);
-
-			if( obj.data.flags[`${MODULE_ID}`].checkWallCollision === "true" &&  canvas.walls.checkCollision(new Ray({x:obj.data.x, y:obj.data.y}, {x:obj.data.x + testX, y:obj.data.y + testY}))) {
-				contains = false;
-			} 
-			// console.log(canvas.walls.checkCollision(new Ray({x:obj.data.x, y:obj.data.y}, {x:obj.data.x + testX, y:obj.data.y + testY})))
-			// console.log(`gx:${gx}, gy:${gy}\ntestX:${testX}, testY:${testY}, contains:${contains},  i:${i}\nr:${r}, c:${c}`)
-			i++;
-
-			// const newDebugLine = {
-			// 	type: CONST.DRAWING_TYPES.POLYGON,
-			// 	author: game.user._id,
-			// 	x: 0,
-			// 	y: 0,
-			// 	strokeWidth: 2,
-			// 	strokeColor: contains ? "#00FF00" : "#FF0000",
-			// 	strokeAlpha: 0.75,
-			// 	textColor: contains ? "#00FF00" : "#FF0000",
-			// 	points: [[obj.data.x, obj.data.y], [obj.data.x + testX, obj.data.y + testY]]
-			// };
-
-			// if(contains) debugLinePass.push(newDebugLine);
-			// else debugLineFail.push(newDebugLine);
-
+			let rayTest = new Ray({x:originX, y:originY}, {x:obj.data.x + testX, y:obj.data.y + testY});
+			
 			if ( !contains ) continue;
+			if( obj.data.flags[`${MODULE_ID}`].checkWallCollision === "true" &&  canvas.walls.checkCollision(rayTest)) {
+				contains = false;
+				continue;
+			}
+
 			grid.grid.highlightGridPosition(hl, {x: gx, y: gy, border, color});
 		}
 	}
-	// debugLineFail.forEach( line => canvas.drawings.createMany(line));
-	//debugLinePass.forEach( line => canvas.drawings.createMany(line));
 }
 
 Hooks.once('setup', function () {
